@@ -10,13 +10,13 @@ import {
 // ============================================================
 export const CONFIG = {
   // 🔴 আপনার logo image link এখানে বসান (না দিলে "A" দেখাবে)
-  LOGO_URL: "",
+  LOGO_URL: "https://www.image2url.com/r2/default/images/1786765708686-cd1cda4a-5889-437e-9768-20204165b150.jpg",
 
   WEBSITE: "https://allpremiumfuturebuy.edgeone.app",
   WHATSAPP: "https://wa.me/881874613165",
   TELEGRAM: "https://t.me/abdullha2",
 
-  DEVELOPER: "MD ABDULLAH"
+  DEVELOPER: "MD ABDULLAH KHAN"
 };
 
 // Logo apply করবে header-এ
