@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=1200">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Invoice — ABDULLAH DIGITAL STORE</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -10,26 +10,28 @@
 <body>
   <header class="app-header no-print">
     <div class="logo-area">
-      <div class="logo-icon">A</div>
+      <div class="logo-icon" id="headerLogo">A</div>
       <div>
         <div class="store-name">ABDULLAH <span>DIGITAL</span> STORE</div>
         <div style="font-size:0.7rem;color:var(--gray-600);">Invoice Viewer</div>
       </div>
     </div>
-    <a href="admin.html" class="btn btn-outline btn-sm">Admin</a>
   </header>
 
   <div class="container">
     <div class="public-invoice-wrapper">
       <div class="card mb-3">
-        <div class="flex-row">
+        <div class="search-box">
           <input type="text" id="publicInvoiceSearch" class="form-control"
                  placeholder="Enter Invoice Number (e.g. INV-20260921-0001)">
-          <button class="btn btn-orange" style="flex:0 0 auto;"
-                  onclick="loadPublicInvoice()">View Invoice</button>
+          <button class="btn btn-orange" onclick="loadPublicInvoice()">🔍 View Invoice</button>
         </div>
       </div>
       <div id="publicInvoiceDisplay"></div>
+    </div>
+
+    <div class="dev-footer">
+      Developed by <strong>MD ABDULLAH</strong>
     </div>
   </div>
 
