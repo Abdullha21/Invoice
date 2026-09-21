@@ -43,7 +43,7 @@
       </div>
     </section>
 
-    <!-- CREATE -->
+    <!-- CREATE INVOICE -->
     <section id="page-create" class="page-section">
       <div class="dashboard-grid">
         <div class="card">
@@ -91,19 +91,23 @@
   <!-- MODAL: Add Product -->
   <div id="productModal" class="modal-overlay">
     <div class="modal-content">
-      <h3 class="mb-3">Add New Product</h3>
+      <h3 class="mb-3">➕ Add New Product</h3>
       <div class="form-group">
-        <label class="form-label">Product Name</label>
-        <input type="text" id="newProductName" class="form-control" placeholder="X Premium">
+        <label class="form-label">Product Name *</label>
+        <input type="text" id="newProductName" class="form-control"
+               placeholder="e.g. X Premium, Canva Pro">
       </div>
       <div class="form-group">
         <label class="form-label">Custom Fields (comma separated)</label>
         <input type="text" id="newProductFields" class="form-control"
-               placeholder="X Profile Link, Gmail Address">
+               placeholder="e.g. X Profile Link, Gmail Address">
+        <small style="color:var(--gray-600);font-size:0.75rem;display:block;margin-top:4px;">
+          Invoice বানানোর সময় এই field গুলো customer-এর কাছ থেকে নেওয়া হবে।
+        </small>
       </div>
       <div class="flex gap-2 mt-3">
         <button class="btn btn-outline" onclick="closeModal('productModal')">Cancel</button>
-        <button class="btn btn-primary" onclick="saveNewProduct()">Save Product</button>
+        <button class="btn btn-primary" onclick="saveNewProduct()">💾 Save Product</button>
       </div>
     </div>
   </div>
@@ -121,9 +125,5 @@
   </div>
 
   <script type="module" src="script.js"></script>
-  <script type="module">
-    import './script.js';
-    window.IS_ADMIN = true;
-  </script>
 </body>
 </html>
