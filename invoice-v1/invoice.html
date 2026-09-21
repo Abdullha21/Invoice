@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice — ABDULLAH DIGITAL STORE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header no-print">
+    <div class="logo-area">
+      <div class="logo-icon">A</div>
+      <div>
+        <div class="store-name">ABDULLAH <span>DIGITAL</span> STORE</div>
+        <div style="font-size:0.7rem;color:var(--gray-600);">Invoice Details</div>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ Print</button>
+      <button class="btn btn-outline btn-sm" onclick="copyInvoiceLink()">🔗 Copy Link</button>
+      <a href="index.html" class="btn btn-outline btn-sm">← Back</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="publicInvoiceDisplay" class="public-invoice-wrapper">
+      <div class="flex-center" style="padding:60px;color:var(--gray-600);">
+        Loading invoice…
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from './firebase.js';
+    import { ref, get, query, orderByChild, equalTo } from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { renderInvoiceHTML } from './script.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    async function loadInvoice() {
+      if (!id) {
+        document.getElementById('publicInvoiceDisplay').innerHTML =
+          '<div class="card flex-center" style="padding:60px;">No invoice ID provided.</div>';
+        return;
+      }
+      const snap = await get(query(ref(db,'invoices'), orderByChild('invoiceNumber'), equalTo(id)));
+      if (!snap.exists()) {
+        document.getElementById('publicInvoiceDisplay').innerHTML =
+          '<div class="card flex-center" style="padding:60px;">❌ Invoice not found.</div>';
+        return;
+      }
+      let invoice;
+      snap.forEach(c => { invoice = { id: c.key, ...c.val() }; });
+      document.getElementById('publicInvoiceDisplay').innerHTML = renderInvoiceHTML(invoice);
+    }
+
+    function copyInvoiceLink() {
+      navigator.clipboard.writeText(window.location.href);
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.textContent = '✅ Invoice link copied!';
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2200);
+    }
+    window.copyInvoiceLink = copyInvoiceLink;
+
+    loadInvoice();
+  </script>
+</body>
+</html>
