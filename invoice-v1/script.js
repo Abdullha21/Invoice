@@ -6,28 +6,49 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // ============================================================
-//  ⚙️ CONFIG — এখানে আপনার সব link বসান
+//  ⚙️ CONFIG — এখানে সব link সেট করা আছে
 // ============================================================
 export const CONFIG = {
-  // 🔴 আপনার logo image link এখানে বসান (না দিলে "A" দেখাবে)
   LOGO_URL: "https://www.image2url.com/r2/default/images/1786765708686-cd1cda4a-5889-437e-9768-20204165b150.jpg",
-
   WEBSITE: "https://allpremiumfuturebuy.edgeone.app",
   WHATSAPP: "https://wa.me/881874613165",
   TELEGRAM: "https://t.me/abdullha2",
-
   DEVELOPER: "MD ABDULLAH KHAN"
 };
 
-// Logo apply করবে header-এ
+// ============================================================
+//  🖼️ LOGO APPLY (header logo)
+// ============================================================
 export function applyLogo(){
   const els = document.querySelectorAll('#headerLogo');
-  if (CONFIG.LOGO_URL && CONFIG.LOGO_URL.trim()){
-    els.forEach(el => {
-      el.innerHTML = `<img src="${CONFIG.LOGO_URL}" alt="Logo"
-        onerror="this.parentNode.textContent='A'">`;
-    });
-  }
+  els.forEach(el => {
+    el.innerHTML = ''; // clear
+
+    if (!CONFIG.LOGO_URL || !CONFIG.LOGO_URL.trim()){
+      el.textContent = 'A';
+      return;
+    }
+
+    const img = document.createElement('img');
+    img.src = CONFIG.LOGO_URL;
+    img.alt = 'Logo';
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'cover';
+    img.style.display = 'block';
+    img.style.borderRadius = 'inherit';
+
+    img.onload = () => {
+      el.innerHTML = '';
+      el.appendChild(img);
+      console.log('✅ Logo loaded:', CONFIG.LOGO_URL);
+    };
+
+    img.onerror = () => {
+      console.warn('❌ Logo failed:', CONFIG.LOGO_URL);
+      el.textContent = 'A';
+    };
+  });
 }
 
 // ============ STATE ============
@@ -92,7 +113,7 @@ export async function loadProducts(){
       });
       products.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     }
-    console.log('📦 Products loaded:', products);
+    console.log('📦 Products loaded:', products.length);
     firebaseReady = true;
 
     if (document.getElementById('page-products')?.classList.contains('active')) renderProducts();
@@ -415,7 +436,7 @@ window.generateInvoice = async ()=>{
 };
 
 // ============================================================
-//  INVOICE LIST — সব invoice দেখাবে
+//  INVOICE LIST
 // ============================================================
 export async function loadInvoiceList(filter){
   const c = document.getElementById('invoiceListContainer');
@@ -441,7 +462,6 @@ export async function loadInvoiceList(filter){
       });
     }
 
-    // sort newest first
     invoices.sort((a,b)=> (b.invoiceNumber||'').localeCompare(a.invoiceNumber||''));
 
     if (filter){
@@ -462,7 +482,6 @@ export async function loadInvoiceList(filter){
       return;
     }
 
-    // Header row
     let html = `
       <div style="padding:10px 16px;background:var(--gray-100);border-radius:12px;
                   display:grid;grid-template-columns:2fr 1.5fr 1fr 1fr 2.5fr;
@@ -477,7 +496,6 @@ export async function loadInvoiceList(filter){
       </div>
     `;
 
-    // Rows
     html += invoices.map(inv => {
       const dt = inv.date ? new Date(inv.date) : null;
       const dateStr = dt ? dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
@@ -522,7 +540,7 @@ export async function loadInvoiceList(filter){
             <button class="btn btn-sm btn-outline" title="Delivery"
                     onclick="openDelivery('${inv.id}')">📦</button>
             <button class="btn btn-sm btn-outline" title="View"
-                    onclick="viewInvoice('${inv.invoiceNumber}')">👁</button>
+             onclick="viewInvoice('${inv.invoiceNumber}')">👁</button>
             <button class="btn btn-sm btn-outline" title="Copy link"
                     onclick="copyLink('${inv.invoiceNumber}')">🔗</button>
             <button class="btn btn-sm btn-danger" title="Delete"
@@ -536,7 +554,8 @@ export async function loadInvoiceList(filter){
 
   } catch (err){
     console.error('loadInvoiceList error:', err);
-    c.innerHTML = `<div class="card" style="padding:24px;color:#991b1b;">⚠️ ${err.message}</div>`;}
+    c.innerHTML = `<div class="card" style="padding:24px;color:#991b1b;">⚠️ ${err.message}</div>`;
+  }
 }
 
 function statusClass(s){
@@ -660,8 +679,11 @@ export function renderInvoiceHTML(inv){
   const isPaid = (status === 'Paid' || status === 'Delivered');
   const isDelivered = status === 'Delivered';
 
+  // 🖼️ Logo HTML (inline styling for guaranteed display)
   const logoHTML = CONFIG.LOGO_URL && CONFIG.LOGO_URL.trim()
-    ? `<img src="${CONFIG.LOGO_URL}" alt="Logo" onerror="this.parentNode.textContent='A'">`
+    ? `<img src="${CONFIG.LOGO_URL}" alt="Logo"
+            style="width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;"
+            onerror="this.style.display='none';this.parentNode.textContent='A';">`
     : 'A';
 
   const grouped = {};
@@ -779,7 +801,7 @@ export function renderInvoiceHTML(inv){
         </ul>
       </div>
 
-      <!-- SUPPORT: BUTTON + TEXT SIDE BY SIDE -->
+      <!-- SUPPORT -->
       <div class="support-section">
         <div class="support-title">📞 Need Help? Contact Us</div>
         <div class="support-list">
@@ -832,5 +854,3 @@ export function renderInvoiceHTML(inv){
 
   if (document.getElementById('invoiceListContainer')) loadInvoiceList();
 })();
-
-  
