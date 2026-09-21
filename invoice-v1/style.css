@@ -1,1 +1,243 @@
+/* style.css — ABDULLAH DIGITAL STORE */
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:#f8fafc;
+  color:#0f172a;
+  line-height:1.5;
+}
+:root{
+  --green:#16A34A;
+  --orange:#FF7F11;
+  --green-light:#e9f7ef;
+  --orange-light:#fff4e6;
+  --gray-100:#f1f5f9;
+  --gray-200:#e2e8f0;
+  --gray-600:#475569;
+  --shadow:0 10px 25px -5px rgba(0,0,0,0.05),0 8px 10px -6px rgba(0,0,0,0.02);
+  --radius:16px;
+}
+.container{max-width:1400px;margin:0 auto;padding:24px;}
 
+/* HEADER */
+.app-header{
+  background:#fff;border-bottom:3px solid var(--green);
+  padding:16px 24px;display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:16px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.02);
+}
+.logo-area{display:flex;align-items:center;gap:12px;}
+.logo-icon{
+  background:linear-gradient(135deg,var(--green),#0d8a3a);
+  width:48px;height:48px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:700;font-size:22px;
+  box-shadow:0 8px 14px -6px rgba(22,163,74,0.3);
+}
+.store-name{font-weight:700;font-size:1.4rem;letter-spacing:-0.02em;}
+.store-name span{color:var(--orange);}
+.badge-admin{
+  background:var(--orange-light);color:var(--orange);
+  font-weight:600;font-size:0.8rem;padding:6px 12px;
+  border-radius:100px;border:1px solid rgba(255,127,17,0.2);
+}
+.nav-tabs{display:flex;gap:8px;flex-wrap:wrap;}
+.nav-tab{
+  padding:8px 20px;border-radius:100px;font-weight:500;
+  font-size:0.95rem;text-decoration:none;color:var(--gray-600);
+  background:#fff;border:1px solid var(--gray-200);
+  transition:all 0.2s;cursor:pointer;
+}
+.nav-tab.active{background:var(--green);border-color:var(--green);color:#fff;
+  box-shadow:0 6px 12px -6px rgba(22,163,74,0.4);}
+.nav-tab:hover:not(.active){background:var(--gray-100);}
+
+/* BUTTONS */
+.btn{
+  padding:10px 20px;border-radius:100px;font-weight:600;
+  font-size:0.9rem;border:none;cursor:pointer;
+  transition:all 0.2s;display:inline-flex;align-items:center;
+  gap:8px;font-family:inherit;text-decoration:none;
+}
+.btn-primary{background:var(--green);color:#fff;
+  box-shadow:0 6px 14px -6px rgba(22,163,74,0.4);}
+.btn-primary:hover{background:#0f8a3a;}
+.btn-outline{background:#fff;border:1.5px solid var(--gray-200);
+  color:var(--gray-600);}
+.btn-outline:hover{border-color:var(--green);color:var(--green);}
+.btn-orange{background:var(--orange);color:#fff;
+  box-shadow:0 6px 14px -6px rgba(255,127,17,0.4);}
+.btn-orange:hover{background:#e06d00;}
+.btn-sm{padding:6px 14px;font-size:0.8rem;}
+
+/* CARDS */
+.card{
+  background:#fff;border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:24px;
+  border:1px solid var(--gray-200);
+}
+.page-section{display:none;}
+.page-section.active{display:block;}
+
+/* INVOICE PROFESSIONAL */
+.invoice-preview{
+  background:#fff;border-radius:var(--radius);
+  padding:32px;box-shadow:var(--shadow);
+  border:1px solid var(--gray-200);
+  max-width:900px;margin:0 auto;
+}
+.invoice-header{
+  display:flex;justify-content:space-between;
+  align-items:flex-start;margin-bottom:28px;
+  flex-wrap:wrap;gap:20px;
+}
+.invoice-header-left{display:flex;gap:16px;align-items:center;}
+.invoice-header-left .logo-icon{
+  width:60px;height:60px;font-size:28px;border-radius:18px;
+}
+.invoice-title{font-size:1.8rem;font-weight:700;
+  letter-spacing:-0.02em;line-height:1.2;}
+.invoice-title span{color:var(--orange);}
+.invoice-meta{text-align:right;}
+.invoice-number{
+  font-size:1.1rem;font-weight:700;color:var(--green);
+  background:var(--green-light);padding:6px 14px;
+  border-radius:100px;display:inline-block;
+}
+.status-badge{
+  display:inline-block;padding:4px 14px;border-radius:100px;
+  font-size:0.8rem;font-weight:600;margin-top:8px;
+  background:#fef9c3;color:#854d0e;
+}
+.status-badge.paid{background:#dcfce7;color:#166534;}
+.status-badge.processing{background:#dbeafe;color:#1e40af;}
+.status-badge.delivered{background:#dcfce7;color:#166534;}
+.status-badge.cancelled{background:#fee2e2;color:#991b1b;}
+
+.invoice-table{width:100%;border-collapse:collapse;margin:24px 0;font-size:0.95rem;}
+.invoice-table th{
+  text-align:left;padding:12px 8px;
+  border-bottom:2px solid var(--gray-200);
+  font-weight:600;color:var(--gray-600);
+  font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;
+}
+.invoice-table td{padding:14px 8px;border-bottom:1px solid var(--gray-200);}
+.invoice-table .product-name{font-weight:600;}
+.custom-field-value{
+  font-size:0.8rem;color:var(--gray-600);
+  background:var(--gray-100);padding:4px 10px;
+  border-radius:100px;display:inline-block;margin-top:4px;
+}
+.total-row td{border-top:2px solid var(--gray-200);
+  border-bottom:none;font-weight:700;font-size:1.1rem;}
+
+.payment-info{
+  background:var(--green-light);border-radius:12px;
+  padding:18px 20px;margin:24px 0;
+  display:flex;flex-wrap:wrap;gap:24px;
+  border-left:4px solid var(--green);
+}
+.payment-item{flex:1;min-width:150px;}
+.payment-label{font-size:0.75rem;text-transform:uppercase;
+  letter-spacing:0.04em;color:var(--gray-600);font-weight:600;}
+.payment-value{font-weight:600;font-size:1.05rem;}
+
+.notes-box{
+  background:var(--orange-light);border-radius:12px;
+  padding:18px 20px;border-left:4px solid var(--orange);margin:20px 0;
+}
+.notes-box h4{font-size:0.85rem;text-transform:uppercase;
+  letter-spacing:0.04em;color:var(--orange);margin-bottom:8px;}
+
+.support-email{
+  text-align:center;font-size:0.9rem;
+  padding-top:16px;border-top:1px dashed var(--gray-200);
+  margin-top:16px;color:var(--gray-600);
+}
+.support-email strong{color:var(--green);}
+
+/* DASHBOARD GRID */
+.dashboard-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:24px;
+}
+@media(max-width:900px){.dashboard-grid{grid-template-columns:1fr;}}
+
+.product-list-item{
+  display:flex;justify-content:space-between;
+  align-items:center;padding:12px 16px;
+  background:var(--gray-100);border-radius:12px;margin-bottom:8px;
+}
+.field-tag{
+  background:#fff;border-radius:100px;padding:4px 12px;
+  font-size:0.8rem;border:1px solid var(--gray-200);
+  margin:2px;display:inline-block;
+}
+
+/* FORM */
+.form-group{margin-bottom:16px;}
+.form-label{font-size:0.85rem;font-weight:600;
+  color:var(--gray-600);margin-bottom:4px;display:block;}
+.form-control{
+  width:100%;padding:10px 14px;border-radius:10px;
+  border:1.5px solid var(--gray-200);
+  font-family:inherit;font-size:0.95rem;transition:border 0.2s;
+}
+.form-control:focus{
+  outline:none;border-color:var(--green);
+  box-shadow:0 0 0 3px rgba(22,163,74,0.1);
+}
+.flex-row{display:flex;gap:12px;flex-wrap:wrap;}
+.flex-row > *{flex:1;}
+
+/* MODAL */
+.modal-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(15,23,42,0.4);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;
+  z-index:1000;padding:16px;
+}
+.modal-overlay.active{display:flex;}
+.modal-content{
+  background:#fff;border-radius:20px;max-width:600px;
+  width:100%;max-height:90vh;overflow-y:auto;padding:28px;
+  box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);
+}
+
+/* UTILITIES */
+.text-green{color:var(--green);}
+.text-orange{color:var(--orange);}
+.mt-2{margin-top:8px;}
+.mt-3{margin-top:16px;}
+.mb-3{margin-bottom:16px;}
+.gap-2{gap:8px;}
+.flex{display:flex;}
+.flex-between{display:flex;justify-content:space-between;align-items:center;}
+.flex-center{display:flex;align-items:center;justify-content:center;}
+.hidden{display:none;}
+.w-100{width:100%;}
+.search-box{display:flex;gap:8px;margin-bottom:16px;}
+.search-box input{flex:1;}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:24px;right:24px;background:#0f172a;
+  color:#fff;padding:14px 24px;border-radius:12px;
+  font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,0.2);
+  z-index:2000;animation:slideUp 0.3s ease;
+}
+@keyframes slideUp{
+  from{opacity:0;transform:translateY(20px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.public-invoice-wrapper{max-width:1000px;margin:0 auto;}
+.delivery-info-block{
+  background:var(--gray-100);border-radius:12px;
+  padding:12px 16px;margin-top:8px;font-size:0.9rem;
+}
+.delivery-info-block strong{color:var(--green);}
+
+@media print{
+  .app-header,.nav-tabs,.btn,.no-print{display:none!important;}
+  body{background:#fff;}
+  .invoice-preview{box-shadow:none;border:none;padding:0;}
+}
