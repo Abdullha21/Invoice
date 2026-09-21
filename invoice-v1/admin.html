@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — ABDULLAH DIGITAL STORE</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -35,7 +35,7 @@
       </div>
       <div class="search-box">
         <input type="text" id="searchInvoiceInput" class="form-control"
-               placeholder="Search by invoice number, customer or product...">
+               placeholder="Search by invoice number, or product...">
         <button class="btn btn-outline" onclick="searchInvoices()">Search</button>
       </div>
       <div id="invoiceListContainer" class="card">
@@ -48,22 +48,24 @@
       <div class="dashboard-grid">
         <div class="card">
           <h3 class="mb-3">Create New Invoice</h3>
+          <p style="font-size:0.85rem;color:var(--gray-600);margin-bottom:16px;">
+            ℹ️ Delivery হয়ে যাওয়ার পরে invoice বানান — status auto "Paid ✓" হবে।
+          </p>
+
           <div class="form-group">
-            <label class="form-label">Customer Name (optional)</label>
-            <input type="text" id="custName" class="form-control" placeholder="John Doe">
+            <label class="form-label">Payment Method</label>
+            <select id="paymentMethod" class="form-control">
+              <option value="Crypto (USDT)">Crypto (USDT)</option>
+              <option value="Crypto (BTC)">Crypto (BTC)</option>
+              <option value="Naira Bank Transfer">Naira Bank Transfer</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
-          <div class="form-group">
-            <label class="form-label">Customer Email (optional)</label>
-            <input type="email" id="custEmail" class="form-control" placeholder="customer@email.com">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Telegram Username (optional)</label>
-            <input type="text" id="custTelegram" class="form-control" placeholder="@username">
-          </div>
+
           <h4 class="mt-3 mb-3">Select Products</h4>
           <div id="productSelectList"></div>
           <button class="btn btn-primary w-100 mt-3" onclick="generateInvoice()">
-            Generate Invoice
+            Generate Invoice ✓
           </button>
         </div>
         <div class="card" style="background:var(--gray-100);">
@@ -98,11 +100,16 @@
                placeholder="e.g. X Premium, Canva Pro">
       </div>
       <div class="form-group">
+        <label class="form-label">Price (USD) *</label>
+        <input type="number" id="newProductPrice" class="form-control"
+               placeholder="e.g. 5.00" step="0.01" min="0" value="0">
+      </div>
+      <div class="form-group">
         <label class="form-label">Custom Fields (comma separated)</label>
         <input type="text" id="newProductFields" class="form-control"
-               placeholder="e.g. X Profile Link, Gmail Address">
+               placeholder="e.g. Gmail Address, Profile Link">
         <small style="color:var(--gray-600);font-size:0.75rem;display:block;margin-top:4px;">
-          Invoice বানানোর সময় এই field গুলো customer-এর কাছ থেকে নেওয়া হবে।
+          Invoice বানানোর সময় প্রতিটা product instance-এর জন্য আলাদা value নেওয়া হবে।
         </small>
       </div>
       <div class="flex gap-2 mt-3">
@@ -116,6 +123,9 @@
   <div id="deliveryModal" class="modal-overlay">
     <div class="modal-content">
       <h3 class="mb-3">Add Delivery Information</h3>
+      <p style="font-size:0.85rem;color:var(--gray-600);margin-bottom:12px;">
+        প্রতিটা product instance-এর জন্য delivery info দিন।
+      </p>
       <div id="deliveryFormFields"></div>
       <div class="flex gap-2 mt-3">
         <button class="btn btn-outline" onclick="closeModal('deliveryModal')">Cancel</button>
