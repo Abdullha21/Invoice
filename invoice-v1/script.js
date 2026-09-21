@@ -1,5 +1,5 @@
-// script.js — ABDULLAH DIGITAL STORE
-import { db, auth } from './firebase.js';
+// script.js — ABDULLAH DIGITAL STORE (Product Save Fixed)
+import { db } from './firebase.js';
 import {
   ref, set, get, push, update, remove, query,
   orderByChild, equalTo, startAt, endAt
@@ -10,17 +10,7 @@ let products = [];
 let selectedProducts = [];
 let deliveryInvoiceId = null;
 let currentInvoiceForDelivery = null;
-
-// ============ DEFAULT PRODUCTS ============
-const DEFAULT_PRODUCTS = [
-  { name:'X Premium',         fields:['X Profile Link'] },
-  { name:'X Premium Plus',    fields:['X Profile Link'] },
-  { name:'Canva Pro',         fields:['Gmail Address'] },
-  { name:'Amazon Prime Video',fields:['Email Address'] },
-  { name:'ChatGPT Plus',      fields:['Gmail Address'] },
-  { name:'Gemini Premium',    fields:['Gmail Address'] },
-  { name:'Telegram Premium',  fields:['Telegram Username'] }
-];
+let firebaseReady = false;
 
 // ============ TOAST ============
 export function showToast(msg){
@@ -33,126 +23,226 @@ export function showToast(msg){
 window.showToast = showToast;
 
 // ============ MODAL ============
-export function openModal(id){ document.getElementById(id).classList.add('active'); }
-export function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+export function openModal(id){ document.getElementById(id)?.classList.add('active'); }
+export function closeModal(id){ document.getElementById(id)?.classList.remove('active'); }
 window.openModal = openModal;
 window.closeModal = closeModal;
 
 // ============ PAGE NAV ============
 export function showPage(id){
   document.querySelectorAll('.page-section').forEach(el=>el.classList.remove('active'));
-  const target = document.getElementById('page-'+id);
-  if (target) target.classList.add('active');
-  document.querySelectorAll('.nav-tab').forEach(el=>{
+  document.getElementById('page-'+id)?.classList.add('active');
+  document.querySelectorAll('.nav-tab[data-page]').forEach(el=>{
     el.classList.toggle('active', el.dataset.page === id);
   });
   if (id === 'dashboard') loadInvoiceList();
-  if (id === 'products') renderProducts();
-  if (id === 'create') renderProductSelectList();
+  if (id === 'products')  renderProducts();
+  if (id === 'create')    renderProductSelectList();
 }
 window.showPage = showPage;
 
-// ============ INVOICE NUMBER ============
-async function generateInvoiceNumber(){
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth()+1).padStart(2,'0');
-  const dd = String(today.getDate()).padStart(2,'0');
-  const prefix = `INV-${yyyy}${mm}${dd}-`;
-
-  const snap = await get(query(ref(db,'invoices'),
-    orderByChild('invoiceNumber'), startAt(prefix), endAt(prefix+'\uf8ff')));
-  let maxSeq = 0;
-  if (snap.exists()) {
-    snap.forEach(c=>{
-      const num = c.val().invoiceNumber || '';
-      if (num.startsWith(prefix)) {
-        const n = parseInt(num.replace(prefix,''),10);
-        if (n > maxSeq) maxSeq = n;
-      }
-    });
-  }
-  return prefix + String(maxSeq+1).padStart(4,'0');
-}
-
-// ============ LOAD PRODUCTS ============
+// ============================================================
+//  🔥 PRODUCT LOAD — Firebase থেকে সব product আনে
+//  (কোনো default product auto-create হবে না)
+// ============================================================
 export async function loadProducts(){
-  const snap = await get(ref(db,'products'));
-  products = [];
-  if (snap.exists()) snap.forEach(c=>products.push({ id:c.key, ...c.val() }));
-  if (products.length === 0){
-    for (const p of DEFAULT_PRODUCTS){
-      const newRef = push(ref(db,'products'));
-      await set(newRef, { name:p.name, fields:p.fields });
-      products.push({ id:newRef.key, ...p });
+  console.log('🔄 Loading products from Firebase...');
+
+  const container = document.getElementById('productsListContainer');
+  if (container && !products.length){
+    container.innerHTML = '<div class="flex-center" style="padding:40px;color:var(--gray-600);">Loading products…</div>';
+  }
+
+  try {
+    const snap = await get(ref(db, 'products'));
+    products = [];
+
+    if (snap.exists()) {
+      snap.forEach(child => {
+        const val = child.val();
+        products.push({
+          id: child.key,
+          name: val.name || 'Unnamed',
+          fields: Array.isArray(val.fields) ? val.fields : [],
+          price: val.price || 0,
+          createdAt: val.createdAt || 0
+        });
+      });
+      // Sort by creation time (newest first)
+      products.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+    }
+
+    console.log('📦 Loaded products:', products);
+    firebaseReady = true;
+
+    // Auto re-render whichever page is visible
+    if (document.getElementById('page-products')?.classList.contains('active')) {
+      renderProducts();
+    }
+    if (document.getElementById('page-create')?.classList.contains('active')) {
+      renderProductSelectList();
+    }
+
+  } catch (err) {
+    console.error('❌ loadProducts error:', err);
+    if (container){
+      container.innerHTML = `
+        <div class="card" style="padding:24px;color:#991b1b;background:#fee2e2;border:1px solid #fca5a5;">
+          <strong>⚠️ Firebase Error:</strong> ${err.message}<br>
+          <small>Check your firebase.js config & Database Rules.</small>
+        </div>`;
     }
   }
 }
 
-// ============ RENDER PRODUCT LIST (ADMIN) ============
+// ============================================================
+//  🎨 RENDER PRODUCT LIST (Admin Page)
+// ============================================================
 function renderProducts(){
   const c = document.getElementById('productsListContainer');
   if (!c) return;
-  if (!products.length){
-    c.innerHTML = '<div class="flex-center" style="padding:40px;">No products.</div>';
+
+  if (!firebaseReady){
+    c.innerHTML = '<div class="flex-center" style="padding:40px;">Firebase connecting…</div>';
     return;
   }
-  c.innerHTML = products.map(p=>`
+
+  if (!products.length){
+    c.innerHTML = `
+      <div class="flex-center" style="padding:60px;flex-direction:column;gap:16px;color:var(--gray-600);">
+        <div style="font-size:3rem;">📦</div>
+        <div><strong>No products yet.</strong></div>
+        <div style="font-size:0.9rem;">Click "+ Add Product" to create your first product.</div>
+        <button class="btn btn-primary" onclick="openAddProductModal()">+ Add Product</button>
+      </div>`;
+    return;
+  }
+
+  c.innerHTML = products.map(p => `
     <div class="product-list-item">
-      <div>
-        <strong>${p.name}</strong><br>
-        <span style="font-size:0.8rem;color:var(--gray-600);">
-          Fields: ${(p.fields||[]).join(', ')||'None'}
-        </span>
+      <div style="flex:1;">
+        <strong style="color:var(--green);">${p.name}</strong>
+        ${p.fields.length
+          ? `<div style="margin-top:6px;">
+              ${p.fields.map(f => `<span class="field-tag">${f}</span>`).join(' ')}
+             </div>`
+          : '<div style="font-size:0.8rem;color:var(--gray-600);margin-top:4px;">No custom fields</div>'
+        }
       </div>
-      <button class="btn btn-sm btn-outline" onclick="deleteProduct('${p.id}')">Delete</button>
+      <button class="btn btn-sm btn-outline"
+              style="color:#991b1b;border-color:#fee2e2;"
+              onclick="deleteProduct('${p.id}')">🗑 Delete</button>
     </div>
   `).join('');
 }
 
-window.deleteProduct = async (id)=>{
-  if(!confirm('Delete this product?')) return;
-  await remove(ref(db,'products/'+id));
-  await loadProducts();
-  renderProducts();
-  showToast('Product deleted');
-};
-
-// ============ ADD PRODUCT ============
+// ============================================================
+//  💾 ADD PRODUCT (Modal open)
+// ============================================================
 window.openAddProductModal = ()=>{
-  document.getElementById('newProductName').value='';
-  document.getElementById('newProductFields').value='';
+  document.getElementById('newProductName').value = '';
+  document.getElementById('newProductFields').value = '';
   openModal('productModal');
+  setTimeout(()=>document.getElementById('newProductName')?.focus(), 100);
 };
 
+// ============================================================
+//  💾 SAVE PRODUCT → Firebase
+// ============================================================
 window.saveNewProduct = async ()=>{
-  const name = document.getElementById('newProductName').value.trim();
-  const raw  = document.getElementById('newProductFields').value.trim();
-  if(!name) return alert('Product name required');
-  const fields = raw ? raw.split(',').map(f=>f.trim()).filter(Boolean) : [];
-  await push(ref(db,'products'), { name, fields });
-  await loadProducts();
-  renderProducts();
-  closeModal('productModal');
-  showToast('✅ Product added');
+  const nameEl = document.getElementById('newProductName');
+  const fieldsEl = document.getElementById('newProductFields');
+
+  const name = nameEl.value.trim();
+  const raw  = fieldsEl.value.trim();
+
+  if (!name){
+    showToast('❌ Product name required');
+    nameEl.focus();
+    return;
+  }
+
+  const fields = raw
+    ? raw.split(',').map(f => f.trim()).filter(Boolean)
+    : [];
+
+  const saveBtn = document.querySelector('#productModal .btn-primary');
+  if (saveBtn){ saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+
+  try {
+    // Push to Firebase — এই line-টাই permanently save করে
+    const newRef = push(ref(db, 'products'));
+    await set(newRef, {
+      name,
+      fields,
+      price: 0,
+      createdAt: Date.now()
+    });
+
+    console.log('✅ Product saved with id:', newRef.key);
+
+    // Reload from Firebase (guarantee we have the fresh data)
+    await loadProducts();
+
+    closeModal('productModal');
+    showToast('✅ Product saved!');
+    renderProducts();
+
+  } catch (err) {
+    console.error('❌ Save product error:', err);
+    showToast('❌ Save failed: ' + err.message);
+  } finally {
+    if (saveBtn){ saveBtn.disabled = false; saveBtn.textContent = '💾 Save Product'; }
+  }
 };
 
-// ============ PRODUCT SELECT (CREATE) ============
+// ============================================================
+//  🗑 DELETE PRODUCT
+// ============================================================
+window.deleteProduct = async (id)=>{
+  if (!confirm('Delete this product permanently?')) return;
+  try {
+    await remove(ref(db, 'products/' + id));
+    await loadProducts();
+    renderProducts();
+    showToast('🗑 Deleted');
+  } catch (err){
+    console.error(err);
+    showToast('❌ Delete failed: ' + err.message);
+  }
+};
+
+// ============================================================
+//  PRODUCT SELECT (Create Invoice Page)
+// ============================================================
 function renderProductSelectList(){
   const c = document.getElementById('productSelectList');
   if (!c) return;
-  if (!products.length){
-    c.innerHTML = '<p style="color:var(--gray-600);">No products available.</p>';
+
+  if (!firebaseReady){
+    c.innerHTML = '<p style="color:var(--gray-600);">Firebase connecting…</p>';
     return;
   }
-  c.innerHTML = products.map(p=>`
+
+  if (!products.length){
+    c.innerHTML = `
+      <div style="padding:16px;background:var(--orange-light);border-radius:12px;
+                  border-left:4px solid var(--orange);font-size:0.9rem;">
+        ⚠️ No products yet.
+        <button class="btn btn-sm btn-orange" style="margin-left:8px;"
+                onclick="showPage('products')">Add Product First</button>
+      </div>`;
+    return;
+  }
+
+  c.innerHTML = products.map(p => `
     <div class="product-list-item" style="flex-direction:column;align-items:flex-start;gap:8px;">
       <div class="flex-between w-100">
         <strong>${p.name}</strong>
         <button class="btn btn-sm btn-outline" onclick="addProductToInvoice('${p.id}')">+ Add</button>
       </div>
       <div id="fields-${p.id}" class="w-100 hidden">
-        ${(p.fields||[]).map(f=>`
+        ${(p.fields||[]).map(f => `
           <div class="form-group" style="margin-top:8px;">
             <label class="form-label">${f}</label>
             <input type="text" class="form-control product-field-input"
@@ -163,92 +253,133 @@ function renderProductSelectList(){
       </div>
     </div>
   `).join('');
+
+  // Restore visibility of already-added products
+  selectedProducts.forEach(sp => {
+    document.getElementById('fields-'+sp.productId)?.classList.remove('hidden');
+    // Restore field values
+    document.querySelectorAll(`.product-field-input[data-product-id="${sp.productId}"]`)
+      .forEach(inp => {
+        const f = sp.fields.find(x => x.label === inp.dataset.field);
+        if (f) inp.value = f.value || '';
+      });
+  });
 }
 
 window.addProductToInvoice = (pid)=>{
-  const prod = products.find(p=>p.id===pid);
+  const prod = products.find(p => p.id === pid);
   if (!prod) return;
-  if (selectedProducts.find(s=>s.productId===pid)){
-    return showToast('Product already added');
+
+  if (selectedProducts.find(s => s.productId === pid)){
+    return showToast('Already added');
   }
+
   selectedProducts.push({
     productId: prod.id,
     name: prod.name,
-    fields: (prod.fields||[]).map(f=>({ label:f, value:'' }))
+    fields: (prod.fields||[]).map(f => ({ label: f, value: '' }))
   });
-  const fc = document.getElementById('fields-'+pid);
-  if (fc) fc.classList.remove('hidden');
+
+  document.getElementById('fields-'+pid)?.classList.remove('hidden');
+
   document.querySelectorAll(`.product-field-input[data-product-id="${pid}"]`)
-    .forEach(input=>{
-      input.addEventListener('input', e=>{
-        const sp = selectedProducts.find(s=>s.productId===pid);
+    .forEach(input => {
+      input.addEventListener('input', e => {
+        const sp = selectedProducts.find(s => s.productId === pid);
         if (!sp) return;
-        const f = sp.fields.find(f=>f.label===e.target.dataset.field);
+        const f = sp.fields.find(f => f.label === e.target.dataset.field);
         if (f) f.value = e.target.value;
         updateLivePreview();
       });
     });
+
   updateLivePreview();
 };
 
-// ============ LIVE PREVIEW ============
+// ============================================================
+//  LIVE PREVIEW
+// ============================================================
 function updateLivePreview(){
   const c = document.getElementById('livePreviewContainer');
   if (!c) return;
+
   if (!selectedProducts.length){
     c.innerHTML = '<div class="flex-center" style="padding:40px;color:var(--gray-600);">Select products to preview</div>';
     return;
   }
+
   c.innerHTML = renderInvoiceHTML({
     invoiceNumber: 'INV-XXXX-XXXX',
     date: new Date().toISOString(),
     status: 'Pending Payment',
     customer: {
-      name:     document.getElementById('custName')?.value||'',
-      email:    document.getElementById('custEmail')?.value||'',
-      telegram: document.getElementById('custTelegram')?.value||''
+      name:     document.getElementById('custName')?.value || '',
+      email:    document.getElementById('custEmail')?.value || '',
+      telegram: document.getElementById('custTelegram')?.value || ''
     },
-    products: selectedProducts.map(sp=>({
-      name: sp.name,
-      quantity: 1,
-      price: 0,
-      fields: sp.fields
+    products: selectedProducts.map(sp => ({
+      name: sp.name, quantity: 1, price: 0, fields: sp.fields
     })),
     total: 0
   });
 }
 
-// ============ GENERATE INVOICE ============
+// ============================================================
+//  INVOICE NUMBER AUTO-GENERATE
+// ============================================================
+async function generateInvoiceNumber(){
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth()+1).padStart(2,'0');
+  const d = String(today.getDate()).padStart(2,'0');
+  const prefix = `INV-${y}${m}${d}-`;
+
+  const snap = await get(query(ref(db,'invoices'),
+    orderByChild('invoiceNumber'), startAt(prefix), endAt(prefix+'\uf8ff')));
+
+  let maxSeq = 0;
+  if (snap.exists()){
+    snap.forEach(c => {
+      const num = c.val().invoiceNumber || '';
+      if (num.startsWith(prefix)){
+        const n = parseInt(num.replace(prefix,''), 10);
+        if (n > maxSeq) maxSeq = n;
+      }
+    });
+  }
+  return prefix + String(maxSeq + 1).padStart(4, '0');
+}
+
+// ============================================================
+//  GENERATE INVOICE
+// ============================================================
 window.generateInvoice = async ()=>{
   if (!selectedProducts.length) return alert('Add at least one product');
 
   const invoiceNumber = await generateInvoiceNumber();
+
   const data = {
     invoiceNumber,
     date: new Date().toISOString(),
     status: 'Pending Payment',
     customer: {
-      name:     document.getElementById('custName')?.value||'',
-      email:    document.getElementById('custEmail')?.value||'',
-      telegram: document.getElementById('custTelegram')?.value||''
+      name:     document.getElementById('custName')?.value || '',
+      email:    document.getElementById('custEmail')?.value || '',
+      telegram: document.getElementById('custTelegram')?.value || ''
     },
-    products: selectedProducts.map(sp=>({
-      name: sp.name,
-      quantity: 1,
-      price: 0,
-      fields: sp.fields
+    products: selectedProducts.map(sp => ({
+      name: sp.name, quantity: 1, price: 0, fields: sp.fields
     })),
     total: 0,
     delivery: {}
   };
 
-  const newRef = push(ref(db,'invoices'));
+  const newRef = push(ref(db, 'invoices'));
   await set(newRef, data);
-  const id = newRef.key;
 
-  showToast('✅ Invoice created: ' + invoiceNumber);
+  showToast('✅ ' + invoiceNumber + ' created');
 
-  // Reset
+  // Reset form
   selectedProducts = [];
   document.getElementById('custName').value = '';
   document.getElementById('custEmail').value = '';
@@ -257,69 +388,72 @@ window.generateInvoice = async ()=>{
   updateLivePreview();
   showPage('dashboard');
 
-  // Offer share
   const link = `${location.origin}${location.pathname.replace('admin.html','')}invoice.html?id=${invoiceNumber}`;
-  if (confirm(`Invoice created!\n\nCopy shareable link?\n${link}`)){
+  if (confirm(`Invoice created!\n\n${link}\n\nCopy link?`)){
     navigator.clipboard.writeText(link);
     showToast('🔗 Link copied');
   }
 };
 
-// ============ LOAD INVOICE LIST ============
+// ============================================================
+//  INVOICE LIST (Dashboard)
+// ============================================================
 export async function loadInvoiceList(filter){
   const c = document.getElementById('invoiceListContainer');
   if (!c) return;
   c.innerHTML = '<div class="flex-center" style="padding:40px;">Loading…</div>';
 
-  const snap = await get(ref(db,'invoices'));
-  let invoices = [];
-  if (snap.exists()){
-    snap.forEach(ch=>invoices.push({ id: ch.key, ...ch.val() }));
-  }
-  invoices.sort((a,b)=> (b.invoiceNumber||'').localeCompare(a.invoiceNumber||''));
+  try {
+    const snap = await get(ref(db, 'invoices'));
+    let invoices = [];
+    if (snap.exists()) snap.forEach(ch => invoices.push({ id: ch.key, ...ch.val() }));
+    invoices.sort((a,b)=> (b.invoiceNumber||'').localeCompare(a.invoiceNumber||''));
 
-  if (filter){
-    const f = filter.toLowerCase();
-    invoices = invoices.filter(inv=>{
-      return (inv.invoiceNumber||'').toLowerCase().includes(f)
-        || (inv.customer?.name||'').toLowerCase().includes(f)
-        || (inv.customer?.email||'').toLowerCase().includes(f)
-        || (inv.products||[]).some(p=>p.name.toLowerCase().includes(f));
-    });
-  }
+    if (filter){
+      const f = filter.toLowerCase();
+      invoices = invoices.filter(inv =>
+        (inv.invoiceNumber||'').toLowerCase().includes(f) ||
+        (inv.customer?.name||'').toLowerCase().includes(f) ||
+        (inv.customer?.email||'').toLowerCase().includes(f) ||
+        (inv.products||[]).some(p => p.name.toLowerCase().includes(f))
+      );
+    }
 
-  if (!invoices.length){
-    c.innerHTML = '<div class="flex-center" style="padding:40px;color:var(--gray-600);">No invoices found.</div>';
-    return;
-  }
+    if (!invoices.length){
+      c.innerHTML = '<div class="flex-center" style="padding:40px;color:var(--gray-600);">No invoices yet.</div>';
+      return;
+    }
 
-  c.innerHTML = invoices.map(inv=>`
-    <div class="product-list-item" style="flex-wrap:wrap;">
-      <div>
-        <strong style="color:var(--green);">${inv.invoiceNumber}</strong>
-        <span class="status-badge ${statusClass(inv.status)}" style="margin-left:8px;">
-          ${inv.status||'Pending Payment'}
-        </span><br>
-        <span style="font-size:0.85rem;color:var(--gray-600);">
-          ${inv.customer?.name||'—'} · ${inv.customer?.email||'—'}
-        </span><br>
-        <span style="font-size:0.8rem;color:var(--gray-600);">
-          ${(inv.products||[]).map(p=>p.name).join(', ')}
-        </span>
+    c.innerHTML = invoices.map(inv => `
+      <div class="product-list-item" style="flex-wrap:wrap;">
+        <div>
+          <strong style="color:var(--green);">${inv.invoiceNumber}</strong>
+          <span class="status-badge ${statusClass(inv.status)}" style="margin-left:8px;">
+            ${inv.status || 'Pending Payment'}
+          </span><br>
+          <span style="font-size:0.85rem;color:var(--gray-600);">
+            ${inv.customer?.name || '—'} · ${inv.customer?.email || '—'}
+          </span><br>
+          <span style="font-size:0.8rem;color:var(--gray-600);">
+            ${(inv.products||[]).map(p=>p.name).join(', ')}
+          </span>
+        </div>
+        <div class="flex gap-2" style="flex-wrap:wrap;">
+          <select class="status-select" onchange="updateStatus('${inv.id}', this.value)">
+            ${['Pending Payment','Paid','Processing','Delivered','Cancelled']
+              .map(s=>`<option ${inv.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <button class="btn btn-sm btn-outline" onclick="openDelivery('${inv.id}')">📦 Delivery</button>
+          <button class="btn btn-sm btn-outline" onclick="viewInvoice('${inv.invoiceNumber}')">👁 View</button>
+          <button class="btn btn-sm btn-outline" onclick="copyLink('${inv.invoiceNumber}')">🔗 Copy</button>
+          <button class="btn btn-sm btn-outline" style="color:#991b1b;"
+                  onclick="deleteInvoice('${inv.id}')">🗑</button>
+        </div>
       </div>
-      <div class="flex gap-2" style="flex-wrap:wrap;">
-        <select class="status-select" onchange="updateStatus('${inv.id}', this.value)">
-          ${['Pending Payment','Paid','Processing','Delivered','Cancelled']
-            .map(s=>`<option ${inv.status===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-        <button class="btn btn-sm btn-outline" onclick="openDelivery('${inv.id}')">📦 Delivery</button>
-        <button class="btn btn-sm btn-outline" onclick="viewInvoice('${inv.invoiceNumber}')">👁 View</button>
-        <button class="btn btn-sm btn-outline" onclick="copyLink('${inv.invoiceNumber}')">🔗 Copy</button>
-        <button class="btn btn-sm btn-outline" style="color:#991b1b;border-color:#fee2e2;"
-                onclick="deleteInvoice('${inv.id}')">🗑</button>
-      </div>
-    </div>
-  `).join('');
+    `).join('');
+  } catch (err) {
+    c.innerHTML = `<div class="card" style="padding:24px;color:#991b1b;">⚠️ ${err.message}</div>`;
+  }
 }
 
 function statusClass(s){
@@ -329,62 +463,51 @@ function statusClass(s){
   return '';
 }
 
-// ============ SEARCH ============
 window.searchInvoices = ()=>{
   const v = document.getElementById('searchInvoiceInput').value;
   loadInvoiceList(v);
 };
-
-// ============ UPDATE STATUS ============
 window.updateStatus = async (id, status)=>{
-  await update(ref(db,'invoices/'+id), { status });
+  await update(ref(db, 'invoices/' + id), { status });
   showToast('Status → ' + status);
 };
-
-// ============ VIEW INVOICE ============
-window.viewInvoice = (invoiceNumber)=>{
-  const base = location.pathname.replace(/\/[^/]*$/,'/');
-  window.open(`${base}invoice.html?id=${invoiceNumber}`, '_blank');
+window.viewInvoice = (num)=>{
+  const base = location.pathname.replace(/\/[^/]*$/, '/');
+  window.open(`${base}invoice.html?id=${num}`, '_blank');
 };
-
-// ============ COPY LINK ============
-window.copyLink = (invoiceNumber)=>{
-  const base = location.origin + location.pathname.replace(/\/[^/]*$/,'/');
-  const link = `${base}invoice.html?id=${invoiceNumber}`;
-  navigator.clipboard.writeText(link);
+window.copyLink = (num)=>{
+  const base = location.origin + location.pathname.replace(/\/[^/]*$/, '/');
+  navigator.clipboard.writeText(`${base}invoice.html?id=${num}`);
   showToast('🔗 Link copied');
 };
-
-// ============ DELETE ============
 window.deleteInvoice = async (id)=>{
-  if (!confirm('Delete this invoice permanently?')) return;
-  await remove(ref(db,'invoices/'+id));
-  showToast('Invoice deleted');
+  if (!confirm('Delete permanently?')) return;
+  await remove(ref(db, 'invoices/' + id));
+  showToast('Deleted');
   loadInvoiceList();
 };
 
-// ============ DELIVERY MODAL ============
+// ============================================================
+//  DELIVERY
+// ============================================================
 window.openDelivery = async (id)=>{
   deliveryInvoiceId = id;
-  const snap = await get(ref(db,'invoices/'+id));
+  const snap = await get(ref(db, 'invoices/' + id));
   if (!snap.exists()) return;
   const inv = snap.val();
   currentInvoiceForDelivery = inv;
   const existing = inv.delivery || {};
 
-  const fields = (inv.products||[]).map((p,i)=>{
-    return `
+  document.getElementById('deliveryFormFields').innerHTML =
+    (inv.products||[]).map((p, i) => `
       <div class="form-group">
         <label class="form-label">${p.name} — Delivery Info</label>
         <input type="text" class="form-control delivery-input"
                data-index="${i}" value="${existing[p.name]||''}"
                placeholder="e.g. Delivered To / Added To / Activated On">
       </div>
-    `;
-  }).join('');
+    `).join('') || '<p>No products</p>';
 
-  document.getElementById('deliveryFormFields').innerHTML =
-    fields || '<p>No products in this invoice.</p>';
   openModal('deliveryModal');
 };
 
@@ -392,34 +515,40 @@ window.saveDeliveryInfo = async ()=>{
   if (!deliveryInvoiceId) return;
   const inputs = document.querySelectorAll('.delivery-input');
   const delivery = {};
-  inputs.forEach(inp=>{
+  inputs.forEach(inp => {
     const p = currentInvoiceForDelivery.products[inp.dataset.index];
     if (p && inp.value.trim()) delivery[p.name] = inp.value.trim();
   });
-  await update(ref(db,'invoices/'+deliveryInvoiceId), { delivery });
+  await update(ref(db, 'invoices/' + deliveryInvoiceId), { delivery });
   closeModal('deliveryModal');
-  showToast('📦 Delivery info saved');
+  showToast('📦 Delivery saved');
   loadInvoiceList();
 };
 
-// ============ PUBLIC INVOICE ============
+// ============================================================
+//  PUBLIC INVOICE VIEW
+// ============================================================
 window.loadPublicInvoice = async ()=>{
   const val = document.getElementById('publicInvoiceSearch').value.trim();
   if (!val) return;
   const display = document.getElementById('publicInvoiceDisplay');
   display.innerHTML = '<div class="flex-center" style="padding:60px;">Searching…</div>';
+
   const snap = await get(query(ref(db,'invoices'),
     orderByChild('invoiceNumber'), equalTo(val)));
+
   if (!snap.exists()){
     display.innerHTML = '<div class="card flex-center" style="padding:60px;">❌ Invoice not found.</div>';
     return;
   }
   let invoice;
-  snap.forEach(c=>{ invoice = { id:c.key, ...c.val() }; });
+  snap.forEach(c => { invoice = { id: c.key, ...c.val() }; });
   display.innerHTML = renderInvoiceHTML(invoice);
 };
 
-// ============ RENDER INVOICE HTML ============
+// ============================================================
+//  🎨 RENDER INVOICE HTML (Green / Orange Design)
+// ============================================================
 export function renderInvoiceHTML(inv){
   const invNum = inv.invoiceNumber || 'INV-XXXX-XXXX';
   const date = inv.date ? new Date(inv.date).toLocaleDateString('en-GB',{
@@ -436,10 +565,9 @@ export function renderInvoiceHTML(inv){
     status==='Processing' ? 'processing' :
     status==='Cancelled' ? 'cancelled' : '';
 
-  const rows = products.map(p=>{
-    const fieldLines = (p.fields||[])
-      .filter(f=>f.value)
-      .map(f=>`<span class="custom-field-value">${f.label}: <strong>${f.value}</strong></span>`)
+  const rows = products.map(p => {
+    const fieldLines = (p.fields||[]).filter(f => f.value)
+      .map(f => `<span class="custom-field-value">${f.label}: <strong>${f.value}</strong></span>`)
       .join(' ');
     const deliveryLine = delivery[p.name]
       ? `<div class="delivery-info-block">📦 <strong>Delivery:</strong> ${delivery[p.name]}</div>`
@@ -464,9 +592,7 @@ export function renderInvoiceHTML(inv){
           <div class="logo-icon">A</div>
           <div>
             <div class="store-name">ABDULLAH <span>DIGITAL</span> STORE</div>
-            <div style="font-size:0.75rem;color:var(--gray-600);">
-              Premium Digital Services
-            </div>
+            <div style="font-size:0.75rem;color:var(--gray-600);">Premium Digital Services</div>
           </div>
         </div>
         <div class="invoice-meta">
@@ -481,9 +607,9 @@ export function renderInvoiceHTML(inv){
       <div class="payment-info" style="background:var(--gray-100);border-left-color:var(--orange);">
         <div class="payment-item">
           <div class="payment-label">Bill To</div>
-          <div class="payment-value">${cust.name||'—'}</div>
+          <div class="payment-value">${cust.name || '—'}</div>
           <div style="font-size:0.8rem;color:var(--gray-600);">
-            ${cust.email||''} ${cust.email&&cust.telegram?'·':''} ${cust.telegram||''}
+            ${cust.email||''} ${cust.email && cust.telegram ? '·' : ''} ${cust.telegram||''}
           </div>
         </div>
         <div class="payment-item">
@@ -496,9 +622,7 @@ export function renderInvoiceHTML(inv){
         <thead>
           <tr>
             <th style="width:50%;">Product</th>
-            <th>Qty</th>
-            <th>Price</th>
-            <th>Total</th>
+            <th>Qty</th><th>Price</th><th>Total</th>
           </tr>
         </thead>
         <tbody>
@@ -538,19 +662,22 @@ export function renderInvoiceHTML(inv){
   `;
 }
 
-// ============ AUTO INIT ============
+// ============================================================
+//  INIT
+// ============================================================
 (async function init(){
+  console.log('🚀 ABDULLAH DIGITAL STORE init…');
+
+  // Nav tabs
+  document.querySelectorAll('.nav-tab[data-page]').forEach(t => {
+    t.addEventListener('click', ()=> showPage(t.dataset.page));
+  });
+
+  // Always load products first
   await loadProducts();
-  // If on admin page
+
+  // Then load invoices if admin page
   if (document.getElementById('invoiceListContainer')){
     loadInvoiceList();
-    // Nav tab listeners
-    document.querySelectorAll('.nav-tab[data-page]').forEach(t=>{
-      t.addEventListener('click', ()=> showPage(t.dataset.page));
-    });
-  }
-  // If on index (public viewer)
-  if (document.getElementById('publicInvoiceSearch')){
-    // nothing else — user clicks button
   }
 })();
